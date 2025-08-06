@@ -31,7 +31,6 @@ else:
     seguro_porcentaje = 0.0
 
 if st.button("Calcular"):
-    # Frecuencias y cálculos
     frecuencias = {
         "Diario": 360,
         "Semanal": 52,
@@ -49,7 +48,7 @@ if st.button("Calcular"):
     tasa_periodica = tasa_anual / 100 / pagos_por_año
     plazo_en_pagos = int(plazo_total_meses * pagos_por_año / 12)
 
-    # Calcular cuota nivelada
+    # Cuota nivelada
     if tipo_cuota == "Cuota nivelada" and frecuencia != "Al vencimiento":
         cuota = monto * (tasa_periodica * (1 + tasa_periodica) ** plazo_en_pagos) / ((1 + tasa_periodica) ** plazo_en_pagos - 1)
     else:
@@ -58,9 +57,9 @@ if st.button("Calcular"):
     saldo = monto
     tabla = []
 
-    # Definimos el inicio del último año para evitar cobrar seguro allí
-    pagos_ultimo_ano = pagos_por_año * 1  # número de pagos en un año
-    inicio_ultimo_ano = plazo_en_pagos - pagos_ultimo_ano + 1  # primer periodo del último año
+    # Definimos el primer período del último año (no se cobra seguro en o después de este)
+    pagos_ultimo_ano = pagos_por_año * 1  # número de pagos en 1 año
+    inicio_ultimo_ano = plazo_en_pagos - pagos_ultimo_ano + 1
 
     for i in range(1, plazo_en_pagos + 1):
         interes = saldo * tasa_periodica
@@ -75,11 +74,11 @@ if st.button("Calcular"):
             abono_capital = monto / plazo_en_pagos
             cuota_actual = abono_capital + interes
 
-        # Seguro se cobra sólo en el inicio de cada año (periodos múltiplos de pagos_por_año + 1)
-        # y nunca durante el último año
-        if incluir_seguro and (i % pagos_por_año == 1) and (i < inicio_ultimo_ano):
-            # El seguro se calcula sobre el saldo actual (al inicio de ese año)
-            seguro_base = saldo * (seguro_porcentaje / 100)
+        # Seguro se cobra solo en los pagos que son múltiplos de pagos_por_año (al final de cada año)
+        # y no se cobra en el último año
+        if incluir_seguro and (i % pagos_por_año == 0) and (i < inicio_ultimo_ano):
+            # Seguro calculado sobre saldo de la cuota actual (saldo antes de restar abono)
+            seguro_base = (saldo / 1000) * seguro_porcentaje * 12  # fórmula que diste
             impuesto = seguro_base * 0.15
             bomberos = seguro_base * 0.05
             papeleria = 50.0
