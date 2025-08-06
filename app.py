@@ -1,4 +1,4 @@
-import streamlit as st
+ import streamlit as st
 import numpy as np
 import pandas as pd
 from io import BytesIO
@@ -12,6 +12,7 @@ st.markdown("""
     </div>
 """, unsafe_allow_html=True)
 st.markdown("##")
+st.markdown("---")
 
 def calcular_cuotas_df(monto, tasa_anual, plazo_meses, frecuencia, tipo_cuota, incluir_seguro, porcentaje_seguro):
     freq_dict = {
@@ -145,7 +146,7 @@ if calcular:
 
     df_resultado = calcular_cuotas_df(monto, tasa, plazo, frecuencia, tipo_cuota, incluir_seguro, porcentaje_seguro)
 
-    cuota_final = df_resultado["Cuota"].iloc[0] if len(df_resultado) == 1 else df_resultado["Cuota"].iloc[0]
+    cuota_final = df_resultado["Cuota"].iloc[0]
     st.info(f"💵 **Cuota a pagar:** Lps. {cuota_final:,.2f}")
 
     df_format = df_resultado.copy()
@@ -155,16 +156,13 @@ if calcular:
     st.subheader("🧾 Tabla de amortización:")
     st.dataframe(df_format, use_container_width=True)
 
-    # Opciones de salida sin usar st.stop()
     st.markdown("---")
     st.markdown("### 📂 Opciones de salida")
-    col1, col2, col3 = st.columns(3)
+    col1, col2 = st.columns(2)
 
     with col1:
         st.markdown(generar_link_descarga_excel(df_resultado), unsafe_allow_html=True)
+
     with col2:
-        st.button("📸 Imprimir", on_click=lambda: st.write("Use Ctrl+P para imprimir desde su navegador."))
-    with col3:
-        salir = st.button("❌ Salir")
-        if salir:
-            st.success("Aplicación cerrada. Puede cerrar la pestaña si lo desea.")
+        if st.button("📸 Instrucción para imprimir"):
+            st.info("Use Ctrl+P o CMD+P desde su navegador para imprimir.")
