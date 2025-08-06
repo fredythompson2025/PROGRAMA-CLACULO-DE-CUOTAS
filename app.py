@@ -1,7 +1,8 @@
+ 
  import streamlit as st
 import numpy as np
 import pandas as pd
-#from io import BytesIO
+from io import BytesIO
 import base64
 
 st.set_page_config(page_title="Cuotas de Préstamo", layout="centered")
