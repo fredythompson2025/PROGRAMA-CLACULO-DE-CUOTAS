@@ -1,5 +1,10 @@
 import streamlit as st
 import pandas as pd
+import io
+from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
+from reportlab.lib import colors
+from reportlab.lib.pagesizes import letter
+from reportlab.lib.styles import getSampleStyleSheet
 
 st.title("🧮 Calculadora de Cuotas Avanzada")
 
@@ -25,7 +30,6 @@ if incluir_seguro:
 else:
     seguro_porcentaje = 0.0
 
-# Botón calcular
 if st.button("Calcular"):
     # Configuración de frecuencias
     frecuencias = {
@@ -71,7 +75,7 @@ if st.button("Calcular"):
             cuota = interes if i < plazo_en_pagos else interes + monto
         elif tipo_cuota == "Cuota nivelada":
             abono_capital = cuota - interes
-        else:  # saldos insolutos
+        else:
             abono_capital = monto / plazo_en_pagos
             cuota = abono_capital + interes
 
@@ -106,3 +110,66 @@ if st.button("Calcular"):
     st.write(f"🧾 Seguro total: **L. {seguro_total:,.2f}**")
     if len(df) > 0:
         st.write(f"📦 Cuota inicial total (incluye seguro): **L. {df.iloc[0]['Pago Total']:,.2f}**")
+
+    # ========== BOTONES DE EXPORTACIÓN ==========
+    st.subheader("📁 Exportar o Imprimir")
+
+    # Botón para descargar Excel
+    excel_buffer = io.BytesIO()
+    with pd.ExcelWriter(excel_buffer, engine="xlsxwriter") as writer:
+        df.to_excel(writer, sheet_name="Amortización", index=False)
+    st.download_button(
+        label="📥 Descargar en Excel",
+        data=excel_buffer.getvalue(),
+        file_name="tabla_amortizacion.xlsx",
+        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    )
+
+    # Función para generar PDF
+    def generar_pdf(dataframe):
+        buffer = io.BytesIO()
+        doc = SimpleDocTemplate(buffer, pagesize=letter)
+        elements = []
+
+        styles = getSampleStyleSheet()
+        elements.append(Paragraph("Tabla de Amortización", styles['Title']))
+        elements.append(Spacer(1, 12))
+
+        table_data = [list(dataframe.columns)] + dataframe.round(2).values.tolist()
+        table = Table(table_data, repeatRows=1)
+        table.setStyle(TableStyle([
+            ('BACKGROUND', (0,0), (-1,0), colors.grey),
+            ('TEXTCOLOR',(0,0),(-1,0),colors.whitesmoke),
+            ('ALIGN',(0,0),(-1,-1),'CENTER'),
+            ('FONTNAME', (0,0), (-1,0), 'Helvetica-Bold'),
+            ('BOTTOMPADDING', (0,0), (-1,0), 8),
+            ('GRID', (0,0), (-1,-1), 0.5, colors.black)
+        ]))
+        elements.append(table)
+
+        doc.build(elements)
+        buffer.seek(0)
+        return buffer
+
+    pdf_data = generar_pdf(df)
+    st.download_button(
+        label="📄 Descargar en PDF",
+        data=pdf_data,
+        file_name="tabla_amortizacion.pdf",
+        mime="application/pdf"
+    )
+
+    # Botón de impresión
+    st.markdown("""
+        <button onclick="window.print()" style="
+            background-color:#4CAF50;
+            color:white;
+            padding:10px 20px;
+            border:none;
+            cursor:pointer;
+            border-radius:5px;
+            font-size:16px;
+            margin-top:10px;
+        ">🖨️ Imprimir</button>
+        """, unsafe_allow_html=True)
+
