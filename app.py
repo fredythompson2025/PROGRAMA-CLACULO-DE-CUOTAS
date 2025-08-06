@@ -11,7 +11,7 @@ st.title("🧮 Calculadora de Cuotas Avanzada")
 # Entradas del usuario
 monto = st.number_input("💰 Monto del préstamo", min_value=0.0, value=100000.0, step=1000.0, format="%0.0f")
 tasa_anual = st.number_input("📈 Tasa de interés anual (%)", min_value=0.0, value=12.0, step=0.1, format="%.2f")
-plazo_total_meses = st.number_input("📅 Plazo total (en meses)", min_value=1, value=12, step=1)
+plazo_total_meses = st.number_input("📅 Plazo total (en meses)", min_value=1, value=24, step=1)
 
 frecuencia = st.selectbox(
     "🔁 Frecuencia de pago",
@@ -31,7 +31,7 @@ else:
     seguro_porcentaje = 0.0
 
 if st.button("Calcular"):
-    # Configuración de frecuencias
+    # Frecuencias y cálculos
     frecuencias = {
         "Diario": 360,
         "Semanal": 52,
@@ -47,32 +47,20 @@ if st.button("Calcular"):
 
     pagos_por_año = frecuencias[frecuencia]
     tasa_periodica = tasa_anual / 100 / pagos_por_año
-    plazo_en_pagos = int(plazo_total_meses * (pagos_por_año / 12))
+    plazo_en_pagos = int(plazo_total_meses * pagos_por_año / 12)
 
     # Calcular cuota nivelada
     if tipo_cuota == "Cuota nivelada" and frecuencia != "Al vencimiento":
-        cuota = monto * (tasa_periodica * (1 + tasa_periodica)**plazo_en_pagos) / ((1 + tasa_periodica)**plazo_en_pagos - 1)
+        cuota = monto * (tasa_periodica * (1 + tasa_periodica) ** plazo_en_pagos) / ((1 + tasa_periodica) ** plazo_en_pagos - 1)
     else:
         cuota = None
 
     saldo = monto
     tabla = []
 
-    # Variables para control de seguro
-    pagos_12_meses = pagos_por_año  # pagos en un año
-    inicio_seguro = 12  # desde cuota 12
-    fin_seguro = plazo_en_pagos - pagos_12_meses  # hasta antes del último año
-
-    if incluir_seguro:
-        seguro_base_total = monto * (seguro_porcentaje / 100)
-        impuesto = seguro_base_total * 0.15
-        bomberos = seguro_base_total * 0.05
-        papeleria = 50.0
-        seguro_total = seguro_base_total + impuesto + bomberos + papeleria
-        num_pagos_seguro = max(1, fin_seguro - inicio_seguro + 1)
-    else:
-        seguro_total = 0.0
-        num_pagos_seguro = 0
+    # Definimos el inicio del último año para evitar cobrar seguro allí
+    pagos_ultimo_ano = pagos_por_año * 1  # número de pagos en un año
+    inicio_ultimo_ano = plazo_en_pagos - pagos_ultimo_ano + 1  # primer periodo del último año
 
     for i in range(1, plazo_en_pagos + 1):
         interes = saldo * tasa_periodica
@@ -87,9 +75,15 @@ if st.button("Calcular"):
             abono_capital = monto / plazo_en_pagos
             cuota_actual = abono_capital + interes
 
-        # Seguro solo se cobra desde cuota 12 hasta antes del último año
-        if incluir_seguro and (inicio_seguro <= i <= fin_seguro):
-            seguro_actual = seguro_total / num_pagos_seguro
+        # Seguro se cobra sólo en el inicio de cada año (periodos múltiplos de pagos_por_año + 1)
+        # y nunca durante el último año
+        if incluir_seguro and (i % pagos_por_año == 1) and (i < inicio_ultimo_ano):
+            # El seguro se calcula sobre el saldo actual (al inicio de ese año)
+            seguro_base = saldo * (seguro_porcentaje / 100)
+            impuesto = seguro_base * 0.15
+            bomberos = seguro_base * 0.05
+            papeleria = 50.0
+            seguro_actual = seguro_base + impuesto + bomberos + papeleria
         else:
             seguro_actual = 0.0
 
@@ -149,12 +143,12 @@ if st.button("Calcular"):
         table_data = [list(dataframe.columns)] + dataframe.round(2).values.tolist()
         table = Table(table_data, repeatRows=1)
         table.setStyle(TableStyle([
-            ('BACKGROUND', (0,0), (-1,0), colors.grey),
-            ('TEXTCOLOR',(0,0),(-1,0),colors.whitesmoke),
-            ('ALIGN',(0,0),(-1,-1),'CENTER'),
-            ('FONTNAME', (0,0), (-1,0), 'Helvetica-Bold'),
-            ('BOTTOMPADDING', (0,0), (-1,0), 8),
-            ('GRID', (0,0), (-1,-1), 0.5, colors.black)
+            ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
+            ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+            ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('BOTTOMPADDING', (0, 0), (-1, 0), 8),
+            ('GRID', (0, 0), (-1, -1), 0.5, colors.black)
         ]))
         elements.append(table)
 
