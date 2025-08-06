@@ -80,10 +80,9 @@ if st.button("Calcular"):
 
     # Calcular seguro anual base y total
     seguro_anual_base = (saldo_seguro_anual / 1000) * seguro_porcentaje * 12
-    impuesto = seguro_anual_base * 0.15
-    bomberos = seguro_anual_base * 0.05
-    papeleria = 50.0
-    seguro_anual_total = seguro_anual_base + impuesto + bomberos + papeleria
+   
+   
+      seguro_anual_total = seguro_anual_base 
 
     # No cobrar seguro si plazo < 12 meses
     if plazo_total_meses < 12:
