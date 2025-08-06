@@ -6,7 +6,7 @@ from io import BytesIO
 
 st.set_page_config(page_title="Cálculo de Cuotas", layout="centered")
 
-st.title("Simulador de Préstamo")
+st.title("Calculo de cuotas de Préstamo")
 
 # Entradas
 capital = st.number_input("Capital del préstamo:", min_value=0.0, step=100.0)
