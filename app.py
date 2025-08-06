@@ -57,7 +57,7 @@ if st.button("Calcular"):
 
     inicio_ultimo_ano = plazo_en_pagos - pagos_por_año + 1
 
-    # Primero calcular saldo después de cada pago para tener saldo de cuota anual
+    # Calcular saldos después de cada pago
     saldos = []
     saldo_temp = monto
     for i in range(1, plazo_en_pagos + 1):
@@ -75,18 +75,25 @@ if st.button("Calcular"):
         saldo_temp = max(0.0, saldo_temp)
         saldos.append(saldo_temp)
 
-    # Obtener saldo para seguro (saldo después de cuota anual)
-    # Si el préstamo es menor a un año, se usa saldo final
+    # Saldo para seguro anual (saldo después de cuota anual)
     saldo_seguro_anual = saldos[pagos_por_año - 1] if plazo_en_pagos >= pagos_por_año else saldos[-1]
 
-    # Calcular seguro anual total
+    # Seguro anual base
     seguro_anual_base = (saldo_seguro_anual / 1000) * seguro_porcentaje * 12
     impuesto = seguro_anual_base * 0.15
     bomberos = seguro_anual_base * 0.05
     papeleria = 50.0
     seguro_anual_total = seguro_anual_base + impuesto + bomberos + papeleria
 
-    # Seguro por cuota (se reparte en todas cuotas del año)
+    # Ajuste por plazo menor a un año: prorratear seguro anual según meses reales
+    if plazo_total_meses < 12:
+        factor_prorrateo = plazo_total_meses / 12
+    else:
+        factor_prorrateo = 1.0
+
+    seguro_anual_total *= factor_prorrateo
+
+    # Seguro por cuota, repartido según frecuencia y plazo
     seguro_por_cuota = seguro_anual_total / pagos_por_año if incluir_seguro else 0.0
 
     saldo = monto
@@ -103,7 +110,7 @@ if st.button("Calcular"):
             abono_capital = monto / plazo_en_pagos
             cuota_actual = abono_capital + interes
 
-        # En el último año no se cobra seguro
+        # No cobrar seguro en último año
         if incluir_seguro and i < inicio_ultimo_ano:
             seguro_actual = seguro_por_cuota
         else:
@@ -199,4 +206,3 @@ if st.button("Calcular"):
             margin-top:10px;
         ">🖨️ Imprimir</button>
         """, unsafe_allow_html=True)
-
