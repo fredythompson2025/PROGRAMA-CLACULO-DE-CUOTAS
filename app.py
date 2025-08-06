@@ -23,7 +23,6 @@ frecuencia = st.selectbox(
 
 tipo_cuota = st.selectbox("📊 Tipo de cuota", ["Cuota nivelada", "Saldos insolutos"])
 
-# Opción para seguro
 incluir_seguro = st.checkbox("¿Incluir seguro de préstamo?", value=True)
 if incluir_seguro:
     seguro_porcentaje = st.number_input("🛡️ Porcentaje de seguro (%)", min_value=0.0, value=2.80, step=0.01, format="%.2f")
@@ -48,7 +47,6 @@ if st.button("Calcular"):
     tasa_periodica = tasa_anual / 100 / pagos_por_año
     plazo_en_pagos = int(plazo_total_meses * pagos_por_año / 12)
 
-    # Cuota nivelada
     if tipo_cuota == "Cuota nivelada" and frecuencia != "Al vencimiento":
         cuota = monto * (tasa_periodica * (1 + tasa_periodica) ** plazo_en_pagos) / ((1 + tasa_periodica) ** plazo_en_pagos - 1)
     else:
@@ -57,9 +55,41 @@ if st.button("Calcular"):
     saldo = monto
     tabla = []
 
-    # Primer pago que corresponde al último año (no cobra seguro desde aquí)
     inicio_ultimo_ano = plazo_en_pagos - pagos_por_año + 1
 
+    # Primero calcular saldo después de cada pago para tener saldo de cuota anual
+    saldos = []
+    saldo_temp = monto
+    for i in range(1, plazo_en_pagos + 1):
+        interes_temp = saldo_temp * tasa_periodica
+        if frecuencia == "Al vencimiento":
+            abono_temp = 0.0 if i < plazo_en_pagos else monto
+            cuota_temp = interes_temp if i < plazo_en_pagos else interes_temp + monto
+        elif tipo_cuota == "Cuota nivelada":
+            abono_temp = cuota - interes_temp
+            cuota_temp = cuota
+        else:
+            abono_temp = monto / plazo_en_pagos
+            cuota_temp = abono_temp + interes_temp
+        saldo_temp -= abono_temp
+        saldo_temp = max(0.0, saldo_temp)
+        saldos.append(saldo_temp)
+
+    # Obtener saldo para seguro (saldo después de cuota anual)
+    # Si el préstamo es menor a un año, se usa saldo final
+    saldo_seguro_anual = saldos[pagos_por_año - 1] if plazo_en_pagos >= pagos_por_año else saldos[-1]
+
+    # Calcular seguro anual total
+    seguro_anual_base = (saldo_seguro_anual / 1000) * seguro_porcentaje * 12
+    impuesto = seguro_anual_base * 0.15
+    bomberos = seguro_anual_base * 0.05
+    papeleria = 50.0
+    seguro_anual_total = seguro_anual_base + impuesto + bomberos + papeleria
+
+    # Seguro por cuota (se reparte en todas cuotas del año)
+    seguro_por_cuota = seguro_anual_total / pagos_por_año if incluir_seguro else 0.0
+
+    saldo = monto
     for i in range(1, plazo_en_pagos + 1):
         interes = saldo * tasa_periodica
 
@@ -73,19 +103,15 @@ if st.button("Calcular"):
             abono_capital = monto / plazo_en_pagos
             cuota_actual = abono_capital + interes
 
-        # Cobrar seguro solo si es múltiplo de pagos_por_año y antes del último año
-        if incluir_seguro and (i % pagos_por_año == 0) and (i < inicio_ultimo_ano):
-            seguro_base = (saldo / 1000) * seguro_porcentaje * 12
-            impuesto = seguro_base * 0.15
-            bomberos = seguro_base * 0.05
-            papeleria = 50.0
-            seguro_actual = seguro_base + impuesto + bomberos + papeleria
+        # En el último año no se cobra seguro
+        if incluir_seguro and i < inicio_ultimo_ano:
+            seguro_actual = seguro_por_cuota
         else:
             seguro_actual = 0.0
 
+        cuota_total = cuota_actual + seguro_actual
         saldo -= abono_capital
         saldo = max(0.0, saldo)
-        cuota_total = cuota_actual + seguro_actual
 
         tabla.append([
             i, cuota_actual, interes, abono_capital,
