@@ -57,9 +57,8 @@ if st.button("Calcular"):
     saldo = monto
     tabla = []
 
-    # Definimos el primer período del último año (no se cobra seguro en o después de este)
-    pagos_ultimo_ano = pagos_por_año * 1  # número de pagos en 1 año
-    inicio_ultimo_ano = plazo_en_pagos - pagos_ultimo_ano + 1
+    # Primer pago que corresponde al último año (no cobra seguro desde aquí)
+    inicio_ultimo_ano = plazo_en_pagos - pagos_por_año + 1
 
     for i in range(1, plazo_en_pagos + 1):
         interes = saldo * tasa_periodica
@@ -74,11 +73,9 @@ if st.button("Calcular"):
             abono_capital = monto / plazo_en_pagos
             cuota_actual = abono_capital + interes
 
-        # Seguro se cobra solo en los pagos que son múltiplos de pagos_por_año (al final de cada año)
-        # y no se cobra en el último año
+        # Cobrar seguro solo si es múltiplo de pagos_por_año y antes del último año
         if incluir_seguro and (i % pagos_por_año == 0) and (i < inicio_ultimo_ano):
-            # Seguro calculado sobre saldo de la cuota actual (saldo antes de restar abono)
-            seguro_base = (saldo / 1000) * seguro_porcentaje * 12  # fórmula que diste
+            seguro_base = (saldo / 1000) * seguro_porcentaje * 12
             impuesto = seguro_base * 0.15
             bomberos = seguro_base * 0.05
             papeleria = 50.0
