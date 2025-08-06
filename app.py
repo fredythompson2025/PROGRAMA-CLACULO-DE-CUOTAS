@@ -78,22 +78,18 @@ if st.button("Calcular"):
     # Saldo para seguro anual (saldo después de cuota anual)
     saldo_seguro_anual = saldos[pagos_por_año - 1] if plazo_en_pagos >= pagos_por_año else saldos[-1]
 
-    # Seguro anual base
+    # Calcular seguro anual base y total
     seguro_anual_base = (saldo_seguro_anual / 1000) * seguro_porcentaje * 12
     impuesto = seguro_anual_base * 0.15
     bomberos = seguro_anual_base * 0.05
     papeleria = 50.0
     seguro_anual_total = seguro_anual_base + impuesto + bomberos + papeleria
 
-    # Ajuste por plazo menor a un año: prorratear seguro anual según meses reales
+    # No cobrar seguro si plazo < 12 meses
     if plazo_total_meses < 12:
-        factor_prorrateo = plazo_total_meses / 12
-    else:
-        factor_prorrateo = 1.0
+        seguro_anual_total = 0.0
 
-    seguro_anual_total *= factor_prorrateo
-
-    # Seguro por cuota, repartido según frecuencia y plazo
+    # Seguro por cuota
     seguro_por_cuota = seguro_anual_total / pagos_por_año if incluir_seguro else 0.0
 
     saldo = monto
@@ -206,3 +202,4 @@ if st.button("Calcular"):
             margin-top:10px;
         ">🖨️ Imprimir</button>
         """, unsafe_allow_html=True)
+
