@@ -55,46 +55,58 @@ if st.button("Calcular"):
     else:
         cuota = None
 
-    # Calcular seguro
-    seguro_base = monto * (seguro_porcentaje / 100) if incluir_seguro else 0.0
-    impuesto = seguro_base * 0.15
-    bomberos = seguro_base * 0.05
-    papeleria = 50.0 if incluir_seguro else 0.0
-    seguro_total = seguro_base + impuesto + bomberos + papeleria if incluir_seguro else 0.0
-    seguro_periodico = seguro_total / plazo_en_pagos if plazo_en_pagos > 0 else 0.0
-
-    # Generar tabla de amortización
     saldo = monto
     tabla = []
+
+    # Variables para control de seguro
+    pagos_12_meses = pagos_por_año  # pagos en un año
+    inicio_seguro = 12  # desde cuota 12
+    fin_seguro = plazo_en_pagos - pagos_12_meses  # hasta antes del último año
+
+    if incluir_seguro:
+        seguro_base_total = monto * (seguro_porcentaje / 100)
+        impuesto = seguro_base_total * 0.15
+        bomberos = seguro_base_total * 0.05
+        papeleria = 50.0
+        seguro_total = seguro_base_total + impuesto + bomberos + papeleria
+        num_pagos_seguro = max(1, fin_seguro - inicio_seguro + 1)
+    else:
+        seguro_total = 0.0
+        num_pagos_seguro = 0
 
     for i in range(1, plazo_en_pagos + 1):
         interes = saldo * tasa_periodica
 
         if frecuencia == "Al vencimiento":
             abono_capital = 0.0 if i < plazo_en_pagos else monto
-            cuota = interes if i < plazo_en_pagos else interes + monto
+            cuota_actual = interes if i < plazo_en_pagos else interes + monto
         elif tipo_cuota == "Cuota nivelada":
             abono_capital = cuota - interes
+            cuota_actual = cuota
         else:
             abono_capital = monto / plazo_en_pagos
-            cuota = abono_capital + interes
+            cuota_actual = abono_capital + interes
+
+        # Seguro solo se cobra desde cuota 12 hasta antes del último año
+        if incluir_seguro and (inicio_seguro <= i <= fin_seguro):
+            seguro_actual = seguro_total / num_pagos_seguro
+        else:
+            seguro_actual = 0.0
 
         saldo -= abono_capital
         saldo = max(0.0, saldo)
-        cuota_total = cuota + seguro_periodico
+        cuota_total = cuota_actual + seguro_actual
 
         tabla.append([
-            i, cuota, interes, abono_capital,
-            seguro_periodico, cuota_total, saldo
+            i, cuota_actual, interes, abono_capital,
+            seguro_actual, cuota_total, saldo
         ])
 
-    # Crear DataFrame
     df = pd.DataFrame(tabla, columns=[
         "Período", "Cuota", "Interés", "Abono a Capital",
         "Seguro", "Pago Total", "Saldo Restante"
     ])
 
-    # Mostrar resultados con separador de miles y dos decimales
     st.subheader("📄 Tabla de Amortización")
     st.dataframe(df.style.format({
         "Cuota": "L. {:,.2f}",
@@ -105,16 +117,15 @@ if st.button("Calcular"):
         "Saldo Restante": "L. {:,.2f}",
     }))
 
-    # Resumen
+    seguro_cobrado = df["Seguro"].sum()
     st.subheader("📊 Resumen")
-    st.write(f"🧾 Seguro total: **L. {seguro_total:,.2f}**")
+    st.write(f"🧾 Seguro total cobrado: **L. {seguro_cobrado:,.2f}**")
     if len(df) > 0:
         st.write(f"📦 Cuota inicial total (incluye seguro): **L. {df.iloc[0]['Pago Total']:,.2f}**")
 
-    # ========== BOTONES DE EXPORTACIÓN ==========
     st.subheader("📁 Exportar o Imprimir")
 
-    # Botón para descargar Excel
+    # Descargar Excel
     excel_buffer = io.BytesIO()
     with pd.ExcelWriter(excel_buffer, engine="xlsxwriter") as writer:
         df.to_excel(writer, sheet_name="Amortización", index=False)
@@ -125,7 +136,7 @@ if st.button("Calcular"):
         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     )
 
-    # Función para generar PDF
+    # Función para PDF
     def generar_pdf(dataframe):
         buffer = io.BytesIO()
         doc = SimpleDocTemplate(buffer, pagesize=letter)
@@ -159,7 +170,7 @@ if st.button("Calcular"):
         mime="application/pdf"
     )
 
-    # Botón de impresión
+    # Botón imprimir
     st.markdown("""
         <button onclick="window.print()" style="
             background-color:#4CAF50;
